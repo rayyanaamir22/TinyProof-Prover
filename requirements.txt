@@ -1,0 +1,6 @@
+torch
+huggingface
+transformers
+requests
+json
+time
