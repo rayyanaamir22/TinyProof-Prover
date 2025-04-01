@@ -35,6 +35,7 @@ class RLAgent:
         Generates a list of plausible initial proof moves.
         In a production system, these could be derived from heuristics or learned strategies.
         """
+        # TODO: find a legitimate way of dynamically producing these
         return [
             "intros",
             "apply lemma1",

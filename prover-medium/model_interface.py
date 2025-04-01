@@ -3,6 +3,7 @@ ModelInterface class which wraps a Hugging Face Transformers model,
 to serve as the MCTS Heuristic for each concurrent proof search agent in launch.py
 """
 
+# frameworks
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import threading
@@ -13,17 +14,17 @@ class ModelInterface:
     This class ensures thread-safe, concurrent inferencing by using a threading lock.
     """
 
-    def __init__(self, model_name="gpt2", device=None):
+    def __init__(self, model_checkpoint: str= "deepseek-ai/DeepSeek-Prover-V1.5-RL", device=None):
         # Determine the device: use provided device or default to CUDA if available
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"Loading model on device: {self.device}")
+        print(f"Model loaded to device: {self.device}")
         
         # Load tokenizer and model
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForCausalLM.from_pretrained(model_name).to(self.device)
-        self.model.eval()  # Set the model to evaluation mode
+        self.tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
+        self.model = AutoModelForCausalLM.from_pretrained(model_checkpoint).to(self.device)
+        self.model.eval()  # set the model to evaluation mode to deactivate extra gradient comps
         
-        # Create a threading lock to guard inference (since the model is not concurrency-serializable)
+        # create a threading lock to guard inference (since the model is not serializable for concurrency)
         self.lock = threading.Lock()
 
     def infer(self, prompt, max_length=100, **generate_kwargs):

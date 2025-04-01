@@ -13,11 +13,17 @@ from rl_agent import RLAgent
 logging.basicConfig(level=logging.INFO)
 
 def run_agent_episode(agent):
+    """
+    Run an episode of the RL agent.
+    """
     best_node, episode_reward = agent.run_episode()
     return best_node.extract_state_info(), episode_reward
 
 def main():
-    # Initialize the components.
+    """
+    Run the RL agent on an exemplar theorem.
+    """
+    # initialize components
     model_interface = ModelInterface(model_name="gpt2")
     verifier = ProofVerifier(server_url="http://localhost:8000")
     theorem = "theorem: for all natural numbers n, sum_{i=1}^n i = n(n+1)/2"
@@ -29,9 +35,9 @@ def main():
         mcts_iterations=20
     )
     
-    num_episodes = 5  # Number of concurrent RL episodes.
+    num_episodes = 5  # num of concurrent RL episodes (i.e. concurrent theorem proof attempts)
     
-    # Use a ThreadPoolExecutor for concurrent episodes.
+    # ThreadPoolExecutor for concurrent episodes
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_episodes) as executor:
         futures = [executor.submit(run_agent_episode, agent) for _ in range(num_episodes)]
         for future in concurrent.futures.as_completed(futures):
@@ -40,7 +46,7 @@ def main():
             print(state_info)
             print("Reward:", reward)
             print("------")
-            time.sleep(1)  # Simulate processing delay.
+            time.sleep(1)  # Simulate processing delay
     
 if __name__ == "__main__":
     main()
