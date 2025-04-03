@@ -2,11 +2,12 @@
 Monte-Carlo Tree Search objects.
 """
 
+# frameworks
 import math
 import random
 
 class MCTSNode:
-    def __init__(self, state, ast=None, parent=None, move=None):
+    def __init__(self, state: str, ast: dict = None, parent: 'MCTSNode' = None, move: str = None) -> None:
         """
         Represents a node in the proof search tree.
         
@@ -23,7 +24,7 @@ class MCTSNode:
             untried_moves (list): List of moves yet to be expanded from this state.
         """
         self.state = state
-        self.ast = ast  # Precise Lean4 structural data (parsed AST)
+        self.ast = ast  # precise Lean4 structural data (parsed AST)
         self.parent = parent
         self.move = move
         self.children = []
@@ -31,28 +32,28 @@ class MCTSNode:
         self.value = 0.0
         self.intrinsic_reward = 0.0
         self.is_terminal = False
-        self.untried_moves = []  # Should be initialized with possible moves
+        self.untried_moves = []  # should be initialized with possible moves
 
-    def add_child(self, child_node):
+    def add_child(self, child_node: 'MCTSNode') -> None:
         self.children.append(child_node)
     
-    def update(self, reward):
+    def update(self, reward: int) -> None:
         self.visits += 1
         self.value += reward
 
-    def get_uct(self, exploration_constant=1.41):
+    def get_ucb(self, exploration_constant: float = 1.41) -> float:
         """
-        Calculate the UCT (Upper Confidence Bound) value for this node.
+        Calculate the UCB (Upper Confidence Bound) value for this node.
         Nodes with zero visits return infinity to ensure exploration.
         """
         if self.visits == 0:
             return float("inf")
-        # UCT formula with additional intrinsic reward term.
+        # UCB formula with additional intrinsic reward term.
         return (self.value / self.visits) + exploration_constant * math.sqrt(
             math.log(self.parent.visits) / self.visits
         ) + self.intrinsic_reward
 
-    def extract_state_info(self):
+    def extract_state_info(self) -> dict:
         """
         Returns a dictionary of this node's internal state for analysis.
         """
@@ -68,9 +69,12 @@ class MCTSNode:
         }
 
 class MCTS:
-    def __init__(self, root, model_interface, verifier, rollout_depth=5, exploration_constant=1.41):
+    """
+    Monte-Carlo Tree Search with RMaxTS enhancements.
+    """
+    def __init__(self, root: MCTSNode, model_interface, verifier, rollout_depth: int = 5, exploration_constant: float = 1.41):
         """
-        Monte-Carlo Tree Search with RMaxTS enhancements.
+        Initialize the MCTS object.
         
         Args:
             root (MCTSNode): The root node of the proof search tree.
@@ -85,16 +89,18 @@ class MCTS:
         self.rollout_depth = rollout_depth
         self.exploration_constant = exploration_constant
 
-    def select(self, node):
+    def select(self, node: MCTSNode) -> MCTSNode:
         """
-        Traverse the tree from the given node using the UCT rule until reaching
+        Traverse the tree from the given node using the UCB rule until reaching
         a node with untried moves or a terminal node.
         """
-        while not node.is_terminal and not node.untried_moves and node.children:
-            node = max(node.children, key=lambda child: child.get_uct(self.exploration_constant))
+        # traverse until reaching a node with untried moves or a terminal node
+        while not node.is_terminal and node.children and node.untried_moves:
+            # argmax over children's UCB values
+            node = max(node.children, key=lambda child: child.get_ucb(self.exploration_constant))
         return node
 
-    def expand(self, node):
+    def expand(self, node: MCTSNode) -> MCTSNode:
         """
         Expands the node by taking one untried move.
         Applies the move to generate a new state and corresponding AST.
@@ -114,7 +120,7 @@ class MCTS:
             return child_node
         return node
 
-    def simulate(self, node):
+    def simulate(self, node: MCTSNode) -> float:
         """
         Perform a rollout (simulation) from the given node for a fixed depth.
         At each step, generate a move using the model and verify it.
@@ -124,24 +130,24 @@ class MCTS:
         total_reward = 0.0
         for _ in range(self.rollout_depth):
             prompt = f"Continue proof from state:\n{current_state}\nProof step:"
-            # Generate a move (proof step) from the model.
+            # generate a move (proof step) from the model
             generated_move = self.model_interface.infer(prompt, max_length=50)
-            # Apply the generated move.
+            # apply the generated move
             new_state = self.apply_move(current_state, generated_move)
-            # Verify the new state with the Lean4 proof assistant.
+            # verify the new state with the Lean4 proof assistant
             result = self.verifier.verify_proof(new_state)
             if result.get("valid"):
-                reward = 1.0  # Extrinsic reward for a valid proof step.
+                reward = 1.0  # extrinsic reward for a valid proof step
             else:
                 reward = 0.0
             total_reward += reward
             current_state = new_state
-            # Break early if we detect a terminal condition.
+            # break early if we detect a terminal condition
             if "end_proof" in new_state:
                 break
         return total_reward
 
-    def backpropagate(self, node, reward):
+    def backpropagate(self, node: MCTSNode, reward: float):
         """
         Backpropagate the reward up the tree.
         """
@@ -149,14 +155,14 @@ class MCTS:
             node.update(reward)
             node = node.parent
 
-    def apply_move(self, state, move):
+    def apply_move(self, state: str, move: str) -> str:
         """
         Dummy state transformation: appends the move to the state.
         In a real implementation, this should apply Lean4-specific transformations.
         """
         return state + "\n" + move
 
-    def parse_ast(self, state):
+    def parse_ast(self, state: str) -> dict:
         """
         Dummy parser for Lean4 state into AST.
         In a real system, integrate the Lean4 AST parser here.
@@ -164,15 +170,15 @@ class MCTS:
         # For demonstration, we split the proof into steps.
         return {"steps": state.strip().splitlines()}
 
-    def compute_intrinsic_reward(self, node):
+    def compute_intrinsic_reward(self, node: MCTSNode) -> float:
         """
         Compute an intrinsic reward for the node.
         This reward incentivizes exploring novel proof states.
         """
-        # Dummy computation: more reward if node is visited less.
+        # dummy computation: more reward if node is visited less
         return 1.0 / (node.visits + 1)
 
-    def run_search(self, iterations=100):
+    def run_search(self, iterations: int = 100) -> MCTSNode:
         """
         Execute the MCTS search for a given number of iterations.
         Returns the best node found (highest visit count).
