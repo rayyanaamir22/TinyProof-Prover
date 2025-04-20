@@ -1,5 +1,5 @@
 """
-RMaxTS Proof Search.
+MCTS Proof Search.
 
 Missing optimizations:
 - Lean Verifier

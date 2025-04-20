@@ -1,3 +1,9 @@
+"""
+RMaxTS Proof Search.
+
+
+"""
+
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import math
 import random
@@ -26,7 +32,7 @@ class RMaxTS:
         """Verify a state, using cache to avoid redundant checks."""
         if state not in self.verification_cache:
             # TODO: modify verifier implementation
-            is_valid, is_complete, _ = self.verifier.verify(state)
+            is_valid, is_complete = self.verifier.verify(state)
             self.verification_cache[state] = (is_valid, is_complete)
         return self.verification_cache[state]
 
@@ -41,7 +47,9 @@ class RMaxTS:
         return is_complete
 
     def generate_tactics(self, state, num_beams=None, do_sample=False):
-        """Generate possible next tactics using the language model."""
+        """
+        Generate possible next tactics using the language model.
+        """
         if num_beams is None:
             num_beams = self.num_beams
         inputs = self.tokenizer(state + "\nNext tactic: ", return_tensors="pt").to(self.model.device)
@@ -63,7 +71,9 @@ class RMaxTS:
         return tactics
 
     def select(self, node):
-        """Select a node to expand using UCT with RMaxTS bonus."""
+        """
+        Select a node to expand using UCT with RMaxTS bonus.
+        """
         while node.children and not self.is_terminal(node):
             node = max(
                 node.children,
@@ -73,7 +83,9 @@ class RMaxTS:
         return node
 
     def uct_value(self, child_node, parent_visits):
-        """Compute UCT value with intrinsic exploration bonus."""
+        """
+        Compute UCT value with intrinsic exploration bonus.
+        """
         if child_node.visit_count == 0:
             return float("inf")
         exploitation = child_node.total_reward / child_node.visit_count
@@ -82,7 +94,9 @@ class RMaxTS:
         return exploitation + exploration + bonus
 
     def expand(self, node):
-        """Expand node by generating valid child states."""
+        """
+        Expand node by generating valid child states.
+        """
         tactics = self.generate_tactics(node.state)
         for tactic, prior_prob in tactics:
             new_state = node.state + "\n" + tactic
@@ -92,7 +106,9 @@ class RMaxTS:
                 node.children.append((tactic, prior_prob, child_node))
 
     def simulate(self, state):
-        """Simulate a random proof path until terminal or max depth."""
+        """
+        Simulate a random proof path until terminal or max depth.
+        """
         current_state = state
         depth = 0
         while depth < self.max_depth:
@@ -112,14 +128,18 @@ class RMaxTS:
         return 1.0 if is_complete else 0.0
 
     def backpropagate(self, node, reward):
-        """Update node statistics up the tree."""
+        """
+        Update node statistics up the tree.
+        """
         while node is not None:
             node.visit_count += 1
             node.total_reward += reward
             node = node.parent
 
-    def search(self, initial_state, num_iterations=100):
-        """Perform RMaxTS search to find the best next tactic."""
+    def search_best_tactic(self, initial_state, num_iterations=100):
+        """
+        Perform RMaxTS search to find the best next tactic.
+        """
         self.root = Node(initial_state)
         is_valid, _ = self.verify_state(initial_state)
         if not is_valid:
@@ -143,33 +163,40 @@ class RMaxTS:
             return None
         best_child = max(self.root.children, key=lambda x: x[2].visit_count)
         return best_child[0]  # Return the tactic
+    
+    def generate_whole_proof(self, theorem: str, iterations_per_sim: int = 100):
+        """
+        Run a proof search given a theorem prompt.
+
+        params
+        theorem: the initial theorem statement
+        iterations_per_sim: number of iterations per MCTS simulation for next tactic
+        """
+        current_state = theorem
+        proof_steps = []
+
+        while True:
+            is_valid, is_complete = self.verify_state(current_state)
+            if not is_valid:
+                print("Invalid state reached. Stopping.")
+                break
+            if is_complete:
+                print("Proof complete!")
+                break
+            best_tactic = self.search_best_tactic(current_state, num_iterations = iterations_per_sim)
+
+            # happens e.g. if input theorem is invalid, no valid child states generated, exhausted search space
+            if best_tactic is None:
+                print("No valid tactics found. Stopping.")
+                break
+            print("Applying tactic:", best_tactic)
+            proof_steps.append(best_tactic)
+            current_state += "\n" + best_tactic
+
+        print("Final proof state:", current_state)
+        print("Proof steps:", proof_steps)
 
 
-def generate_whole_proof(rmax_ts, theorem):
-    current_state = theorem
-    proof_steps = []
-
-    while True:
-        is_valid, is_complete = rmax_ts.verify_state(current_state)
-        if not is_valid:
-            print("Invalid state reached. Stopping.")
-            break
-        if is_complete:
-            print("Proof complete!")
-            break
-        best_tactic = rmax_ts.search(current_state, num_iterations=100)
-        if best_tactic is None:
-            print("No valid tactics found. Stopping.")
-            break
-        print("Applying tactic:", best_tactic)
-        proof_steps.append(best_tactic)
-        current_state += "\n" + best_tactic
-
-    print("Final proof state:", current_state)
-    print("Proof steps:", proof_steps)
-
-
-# Example usage
 if __name__ == "__main__":
     # load model
     model_name = "deepseek-ai/DeepSeek-Prover-V1.5-RL"
@@ -185,8 +212,8 @@ if __name__ == "__main__":
     theorem = "forall (a b : ℕ), a + b = b + a"
 
     # just get the next tactic
-    #best_tactic = rmax_ts.search(theorem, num_iterations=100)
+    #best_tactic = rmax_ts.search_best_tactic(theorem, num_iterations=100)
     #print("Best next tactic:", best_tactic)
 
     # search for an entire proof
-    #generate_whole_proof(rmax_ts, theorem)
+    #rmax_ts.generate_whole_proof(rmax_ts, theorem)
