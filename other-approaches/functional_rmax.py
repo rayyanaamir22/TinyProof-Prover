@@ -1,7 +1,5 @@
 """
-Functional RMaxTS
-
-(enhanced with Grok)
+Functional RMaxTS approach
 """
 
 # frameworks

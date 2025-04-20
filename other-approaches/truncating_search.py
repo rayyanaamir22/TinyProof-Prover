@@ -1,3 +1,7 @@
+"""
+RMaxTS emphasizing the Truncate-and-Resume functionality. Based on https://medium.com/@haitham.bouammar71/new-grounds-in-theorem-proving-with-deepseek-prover-v1-5-681c4e41caba
+"""
+
 import math
 import random
 import torch

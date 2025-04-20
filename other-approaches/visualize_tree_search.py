@@ -1,5 +1,5 @@
 """
-RMaxTS Visualization Attempt
+Visualize a Tree Search with GraphViz
 """
 
 # frameworks
@@ -16,8 +16,8 @@ class TreeNode:
         self.visits = 0
         self.value = 0  # Estimated value from DeepSeekProver
 
-class RMaxTS:
-    def __init__(self, model_name="DeepSeek-AI/DeepSeekProver-V1.5"):
+class SimplifiedRMaxTS:
+    def __init__(self, model_name="deepseek-ai/DeepSeek-Prover-V1.5-RL"):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = AutoModelForCausalLM.from_pretrained(model_name).to(self.device)
@@ -78,6 +78,6 @@ class RMaxTS:
             self._add_nodes(child)
 
 if __name__ == "__main__":
-    searcher = RMaxTS()
+    searcher = SimplifiedRMaxTS()
     initial_state = "Start Proof"
     searcher.search(initial_state)
