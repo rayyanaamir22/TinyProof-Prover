@@ -69,6 +69,7 @@ class DummyRMaxTS:
         )
         tactics = []
         for i, output in enumerate(outputs):
+            # NOTE: this is returning tactic 'Unknown'
             tactic = self.tokenizer.decode(output[inputs["input_ids"].shape[1]:], skip_special_tokens=True).strip()
             prior_prob = 1.0 / (i + 1) if not do_sample else 0.5
             tactics.append((tactic, prior_prob))

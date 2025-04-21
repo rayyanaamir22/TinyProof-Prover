@@ -41,7 +41,7 @@ class DummyTokenizer:
     def decode(self, ids, skip_special_tokens=True):
         if len(ids) == 1 and ids[0] in self.id_to_tactic:
             return self.id_to_tactic[ids[0]]
-        return "Unknown"
+        return "Unknown" # This is being returned every time
 
 class DummyModel:
     def __init__(self, tactic_dict, tactic_to_id):
