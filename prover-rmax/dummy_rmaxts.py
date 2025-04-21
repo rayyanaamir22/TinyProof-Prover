@@ -1,5 +1,5 @@
 """
-RMaxTS Proof Search.
+RMaxTS Proof Search, modified for Dummy implementations
 """
 
 # frameworks
@@ -14,7 +14,7 @@ class Node:
         self.visit_count = 0
         self.total_reward = 0.0
 
-class RMaxTS:
+class DummyRMaxTS:
     def __init__(self, model, tokenizer, verifier, c=1.0, b=1.0, max_depth=10, num_beams=5):
         self.model = model
         self.tokenizer = tokenizer
@@ -50,8 +50,14 @@ class RMaxTS:
         """
         if num_beams is None:
             num_beams = self.num_beams
+
+        # FIXME: for dummy model, set the current state in the model if it supports it
+        if hasattr(self.model, 'set_state'):
+            self.model.set_state(state)
         
-        inputs = self.tokenizer(state + "\nNext tactic: ", return_tensors="pt").to(self.model.device)
+        inputs = self.tokenizer(state + "\nNext tactic: ", return_tensors="pt")
+        # ensure inputs are on the model’s device
+        inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
         outputs = self.model.generate(
             **inputs,
             max_new_tokens=50,
@@ -63,6 +69,7 @@ class RMaxTS:
         )
         tactics = []
         for i, output in enumerate(outputs):
+            # NOTE: this is returning tactic 'Unknown'
             tactic = self.tokenizer.decode(output[inputs["input_ids"].shape[1]:], skip_special_tokens=True).strip()
             prior_prob = 1.0 / (i + 1) if not do_sample else 0.5
             tactics.append((tactic, prior_prob))
@@ -83,6 +90,16 @@ class RMaxTS:
     def uct_value(self, child_node, parent_visits):
         """
         Compute UCT value with intrinsic exploration bonus.
+
+        In terms of RMaxTS:
+        
+        X: total reward of child node
+        N: times child node was visited
+        c: exploration constant  (default = 1)
+        N_p: times parent node was visited
+        b: intrinsic reward constant (default = 1)  <— gives higher UCT value (priority) to less visited nodes
+
+        UCT = X/N [exploitation] + c*sqrt(ln(N_p) / N) [exploration] + b/sqrt(N) [intrinsic reward]
         """
         if child_node.visit_count == 0:
             return float("inf")
@@ -194,7 +211,7 @@ class RMaxTS:
         print("Final proof state:", current_state)
         print("Proof steps:", proof_steps)
 
-        #return proof_steps
+        return proof_steps
 
 
 if __name__ == "__main__":
