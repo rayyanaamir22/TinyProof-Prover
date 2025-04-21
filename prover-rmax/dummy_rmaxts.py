@@ -90,6 +90,16 @@ class DummyRMaxTS:
     def uct_value(self, child_node, parent_visits):
         """
         Compute UCT value with intrinsic exploration bonus.
+
+        In terms of RMaxTS:
+        
+        X: total reward of child node
+        N: times child node was visited
+        c: exploration constant  (default = 1)
+        N_p: times parent node was visited
+        b: intrinsic reward constant (default = 1)  <— gives higher UCT value (priority) to less visited nodes
+
+        UCT = X/N [exploitation] + c*sqrt(ln(N_p) / N) [exploration] + b/sqrt(N) [intrinsic reward]
         """
         if child_node.visit_count == 0:
             return float("inf")
