@@ -194,6 +194,8 @@ class RMaxTS:
         print("Final proof state:", current_state)
         print("Proof steps:", proof_steps)
 
+        #return proof_steps
+
 
 if __name__ == "__main__":
     pass

@@ -9,7 +9,7 @@ from dummy_rmaxts import DummyRMaxTS
 from dummy import DummyModel, DummyTokenizer, DummyVerifier
 
 
-def example_with_dummies():
+def example_A():
     """
     Launch an RMaxTS using the Dummy objects from dummy.py
     """
@@ -40,8 +40,25 @@ def example_with_dummies():
     # run the proof search
     input_thm = "Theorem: A"
     proof_steps = rmax_ts.generate_whole_proof(input_thm, iterations_per_sim=10)
+    print("Search complete.")
+
+def example_B():
+    # FIXME: decode failing
+    tactics = ["Intro", "ApplyLemma", "WrongA", "WrongB", "WrongC", "WrongD"]
+    tactic_to_id = {t: i for i, t in enumerate(tactics)}
+    id_to_tactic = {i: t for i, t in tactic_to_id.items()}
+    tactic_dict = {
+        "Theorem: B": ["Intro", "WrongA", "WrongB"],
+        "Theorem: B\nIntro": ["ApplyLemma", "WrongC", "WrongD"],
+    }
+    correct_proof = "Theorem: B\nIntro\nApplyLemma"
+
+    tokenizer = DummyTokenizer(id_to_tactic)
+    model = DummyModel(tactic_dict, tactic_to_id)
+    verifier = DummyVerifier(correct_proof)
+    rmax_ts = DummyRMaxTS(model, tokenizer, verifier, num_beams=3, max_depth=2)
+    proof_steps = rmax_ts.generate_whole_proof("Theorem: B", iterations_per_sim=10)
     print("Generated proof:", proof_steps)
 
-
 if __name__ == "__main__":
-    example_with_dummies()
+    example_A()

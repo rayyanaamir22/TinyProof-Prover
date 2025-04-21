@@ -34,14 +34,18 @@ class DummyTokenizer:
         self.eos_token_id = 999  # Dummy EOS token ID
 
     def __call__(self, text, return_tensors="pt"):
-        # Return a dictionary with tensors already on CPU
         inputs = {"input_ids": torch.tensor([[100]], dtype=torch.long)}
         return inputs
 
     def decode(self, ids, skip_special_tokens=True):
+        # Convert tensor to list if needed
+        if isinstance(ids, torch.Tensor):
+            ids = ids.tolist()
+        # Ensure ids is a single ID
         if len(ids) == 1 and ids[0] in self.id_to_tactic:
             return self.id_to_tactic[ids[0]]
-        return "Unknown" # This is being returned every time
+        print(f"Decode failed: ids={ids}, id_to_tactic={self.id_to_tactic}")  # Debug
+        return "Unknown"
 
 class DummyModel:
     def __init__(self, tactic_dict, tactic_to_id):
