@@ -1,10 +1,8 @@
 """
 RMaxTS Proof Search.
-
-
 """
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
+# frameworks
 import math
 import random
 
@@ -52,7 +50,12 @@ class RMaxTS:
         """
         if num_beams is None:
             num_beams = self.num_beams
-        inputs = self.tokenizer(state + "\nNext tactic: ", return_tensors="pt").to(self.model.device)
+        # Set the current state in the model if it supports it (for dummy model)
+        if hasattr(self.model, 'set_state'):
+            self.model.set_state(state)
+        inputs = self.tokenizer(state + "\nNext tactic: ", return_tensors="pt")
+        # Ensure inputs are on the model’s device
+        inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
         outputs = self.model.generate(
             **inputs,
             max_new_tokens=50,
@@ -65,7 +68,6 @@ class RMaxTS:
         tactics = []
         for i, output in enumerate(outputs):
             tactic = self.tokenizer.decode(output[inputs["input_ids"].shape[1]:], skip_special_tokens=True).strip()
-            # Assign prior probability (simplified as inverse rank)
             prior_prob = 1.0 / (i + 1) if not do_sample else 0.5
             tactics.append((tactic, prior_prob))
         return tactics
@@ -198,22 +200,4 @@ class RMaxTS:
 
 
 if __name__ == "__main__":
-    # load model
-    model_name = "deepseek-ai/DeepSeek-Prover-V1.5-RL"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
-
-    # TODO: load actual lean4 verifier object
-    from ast_parser import AstParser
-    verifier = AstParser()
-
-    # problem setup
-    rmax_ts = RMaxTS(model, tokenizer, verifier)
-    theorem = "forall (a b : ℕ), a + b = b + a"
-
-    # just get the next tactic
-    #best_tactic = rmax_ts.search_best_tactic(theorem, num_iterations=100)
-    #print("Best next tactic:", best_tactic)
-
-    # search for an entire proof
-    #rmax_ts.generate_whole_proof(rmax_ts, theorem)
+    pass
