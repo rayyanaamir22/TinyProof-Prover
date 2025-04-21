@@ -1,5 +1,5 @@
 """
-RMaxTS Proof Search.
+RMaxTS Proof Search, modified for Dummy implementations
 """
 
 # frameworks
@@ -14,7 +14,7 @@ class Node:
         self.visit_count = 0
         self.total_reward = 0.0
 
-class RMaxTS:
+class DummyRMaxTS:
     def __init__(self, model, tokenizer, verifier, c=1.0, b=1.0, max_depth=10, num_beams=5):
         self.model = model
         self.tokenizer = tokenizer
@@ -50,8 +50,14 @@ class RMaxTS:
         """
         if num_beams is None:
             num_beams = self.num_beams
+
+        # FIXME: for dummy model, set the current state in the model if it supports it
+        if hasattr(self.model, 'set_state'):
+            self.model.set_state(state)
         
-        inputs = self.tokenizer(state + "\nNext tactic: ", return_tensors="pt").to(self.model.device)
+        inputs = self.tokenizer(state + "\nNext tactic: ", return_tensors="pt")
+        # ensure inputs are on the model’s device
+        inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
         outputs = self.model.generate(
             **inputs,
             max_new_tokens=50,
